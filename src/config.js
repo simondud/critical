@@ -11,6 +11,7 @@ const DEFAULT = {
   maxImageFileSize: 10240,
   inline: false,
   strict: false,
+  ignoreHTTPSErrors: false,
   extract: false,
   inlineImages: false,
   concurrency: Number.POSITIVE_INFINITY,
@@ -24,6 +25,8 @@ const schema = Joi.object()
     css: [Joi.string(), Joi.array()],
     base: Joi.string(),
     strict: Joi.boolean().default(DEFAULT.strict),
+    //TODO SIMON added param ignoreHTTPSErrors
+    ignoreHTTPSErrors: Joi.boolean().default(DEFAULT.ignoreHTTPSErrors),
     extract: Joi.boolean().default(DEFAULT.extract),
     inlineImages: Joi.boolean().default(DEFAULT.inlineImages),
     postcss: Joi.array(),

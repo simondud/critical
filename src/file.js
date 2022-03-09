@@ -329,7 +329,8 @@ async function fetch(uri, options = {}, secure = true) {
     resourceUrl = urlResolve(`http${secure ? 's' : ''}://te.st`, uri);
   }
 
-  requestOptions.https = {rejectUnauthorized: true, ...(https || {})};
+  //TODO SIMON added param. It was rejectUnauthorized: true
+  requestOptions.https = {rejectUnauthorized: !options.ignoreHTTPSErrors, ...(https || {})};
   if (user && pass) {
     headers.Authorization = `Basic ${token(user, pass)}`;
   }
@@ -849,6 +850,39 @@ async function getStylesheet(document, filepath, options = {}) {
     warn(`Not rebasing assets for ${originalPath}. Use "rebase" option`);
   }
 
+  //TODO SIMON include this change START
+  if(!file.inline) {
+    let css = file.contents.toString();
+    if(css.indexOf("@import")) {
+      //Search for @include directives and replace with their contents.
+      let regexImp = /@import\s*(url\s*\((["']?)([^\)]*?)["']?\)|(["']).*?["'])([^;]*);/gm;
+      let match,
+          imports = {};
+      //could use getCss
+      while((match = regexImp.exec(css)) !== null) {
+          //TODO check the media query in match[4] to see if the @import is screen, otherwise the CSS is not critical
+          if(!!match[4] && (match[4].indexOf('print') >= 0 || match[4].indexOf('speech') >= 0) && match[4].indexOf('screen') < 0 ) {
+            continue; //TODO SIMON fix naive approach, would fail for "not print" for example
+          }
+          let url = !!match[3] ? match[3] : match[1];
+          imports[new URL(url, file.url).toString()] = match[0];
+      }
+      let replaced = false;
+      for(let idx in imports) {
+        let styleSheet = await getStylesheet(document, idx, options);
+        if(!!styleSheet.contents) {
+          css = css.replace(imports[idx], styleSheet.contents.toString())
+          replaced = true;
+        }
+      }
+      if(replaced) {
+        file.contents = Buffer.from(css, "utf-8");
+      }
+    }
+  }
+  //change END
+
+
   debug('(getStylesheet) Result:', file);
 
   return file;
@@ -871,7 +905,8 @@ async function getCss(document, options = {}) {
   } else {
     stylesheets = await mapAsync(document.stylesheets, (file, index) => {
       const media = (document.stylesheetsMedia || [])[index];
-      return getStylesheet(document, file, {...options, media});
+      let stylesheet = getStylesheet(document, file, {...options, media});
+      return stylesheet
     });
     debug('(getCss) extract from document', document.stylesheets, stylesheets);
   }
