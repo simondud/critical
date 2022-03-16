@@ -1,10 +1,10 @@
 {
   "name": "critical",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Extract & Inline Critical-path CSS from HTML",
-  "author": "Addy Osmani",
+  "author": "Simon Duduica",
   "license": "Apache-2.0",
-  "repository": "addyosmani/critical",
+  "repository": "simondud/critical",
   "scripts": {
     "jest": "jest --coverage",
     "xo": "xo",
