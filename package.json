@@ -1,5 +1,5 @@
 {
-  "name": "critical",
+  "name": "@simondud/critical",
   "version": "4.1.0",
   "description": "Extract & Inline Critical-path CSS from HTML",
   "author": "Simon Duduica",
