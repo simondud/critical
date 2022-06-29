@@ -12,6 +12,7 @@ const DEFAULT = {
   inline: false,
   strict: false,
   ignoreHTTPSErrors: false,
+  useURLInPenthouse: false,
   extract: false,
   inlineImages: false,
   concurrency: Number.POSITIVE_INFINITY,
@@ -27,6 +28,7 @@ const schema = Joi.object()
     strict: Joi.boolean().default(DEFAULT.strict),
     //TODO SIMON added param ignoreHTTPSErrors
     ignoreHTTPSErrors: Joi.boolean().default(DEFAULT.ignoreHTTPSErrors),
+    useURLInPenthouse: Joi.boolean().default(DEFAULT.useURLInPenthouse),
     extract: Joi.boolean().default(DEFAULT.extract),
     inlineImages: Joi.boolean().default(DEFAULT.inlineImages),
     postcss: Joi.array(),
