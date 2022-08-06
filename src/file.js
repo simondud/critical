@@ -277,27 +277,35 @@ async function rebaseAssets(css, from, to, method = 'rebase') {
     from = pathname;
   }
 
-  if (typeof method === 'function') {
-    const transform = (asset, ...rest) => {
-      const assetNormalized = {
-        ...asset,
-        absolutePath: normalizePath(asset.absolutePath),
-        relativePath: normalizePath(asset.relativePath),
+  //TODO SIMON this comes from postcss parser.js "Unknown word" exception, which was triggered by the presence of "border-radius: {{RADIUS}};" in an inline style.
+  // The other (valid) CSS in the same block is used by the browser, so check if possible to not discard the full CSS block.
+  try {
+    if (typeof method === 'function') {
+      const transform = (asset, ...rest) => {
+        const assetNormalized = {
+          ...asset,
+          absolutePath: normalizePath(asset.absolutePath),
+          relativePath: normalizePath(asset.relativePath),
+        };
+  
+        return method(assetNormalized, ...rest);
       };
-
-      return method(assetNormalized, ...rest);
-    };
-
-    const result = await postcss()
-      .use(postcssUrl({url: transform}))
-      .process(css, {from, to});
-    rebased = result.css;
-  } else if (from && to) {
-    const result = await postcss()
-      .use(postcssUrl({url: method}))
-      .process(css, {from, to});
-    rebased = result.css;
+  
+      const result = await postcss()
+        .use(postcssUrl({url: transform}))
+        .process(css, {from, to});
+      rebased = result.css;
+    } else if (from && to) {
+      const result = await postcss()
+        .use(postcssUrl({url: method}))
+        .process(css, {from, to});
+      rebased = result.css;
+    }
+  } catch(e) {
+    console.log(e);
+    return Buffer.from('');
   }
+
 
   return Buffer.from(rebased);
 }
