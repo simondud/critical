@@ -260,8 +260,6 @@ function glob(pattern, {base} = {}) {
  * @returns {Buffer} Rebased css
  */
 async function rebaseAssets(css, from, to, method = 'rebase') {
-  let rebased = css.toString();
-
   debug('Rebase assets', {from, to});
 
   if (/\/$/.test(to)) {
@@ -277,37 +275,84 @@ async function rebaseAssets(css, from, to, method = 'rebase') {
     from = pathname;
   }
 
-  //TODO SIMON this comes from postcss parser.js "Unknown word" exception, which was triggered by the presence of "border-radius: {{RADIUS}};" in an inline style.
-  // The other (valid) CSS in the same block is used by the browser, so check if possible to not discard the full CSS block.
-  try {
-    if (typeof method === 'function') {
-      const transform = (asset, ...rest) => {
-        const assetNormalized = {
-          ...asset,
-          absolutePath: normalizePath(asset.absolutePath),
-          relativePath: normalizePath(asset.relativePath),
-        };
-  
-        return method(assetNormalized, ...rest);
+  //examples of "Unknown word" exception that we're trying to mitigate, because the other CSS in the same block is used by the browser:
+  //  - the presence of "border-radius: {{RADIUS}};" in an inline style.
+  //  - the end of a CSS that wrongly contains some html: ...}/* Start custom CSS for section, class: .elementor-element-5f3d5788 */<FontAwesomeIcon icon="fa-brands fa-square-facebook" />/* End custom CSS */
+  let rebased;
+  for(let i = 0; i < 5; i++) {
+    try {
+      rebased = await doRebaseAssets(css, from, to, method);
+      break;
+    } catch(e) {
+      console.log(e);
+      if(e.reason == "Unknown word") {
+        //remove the offending CSS and retry
+        css = removeOffendingCSS(e);
+      } else {
+        return Buffer.from('');
+      }
+    }
+  }
+  return Buffer.from(rebased);
+}
+
+async function doRebaseAssets(css, from, to, method) {
+  if (typeof method === 'function') {
+    const transform = (asset, ...rest) => {
+      const assetNormalized = {
+        ...asset,
+        absolutePath: normalizePath(asset.absolutePath),
+        relativePath: normalizePath(asset.relativePath),
       };
-  
-      const result = await postcss()
+
+      return method(assetNormalized, ...rest);
+    };
+
+    const result = await postcss()
         .use(postcssUrl({url: transform}))
         .process(css, {from, to});
-      rebased = result.css;
-    } else if (from && to) {
-      const result = await postcss()
+    return result.css;
+  } else if (from && to) {
+    const result = await postcss()
         .use(postcssUrl({url: method}))
         .process(css, {from, to});
-      rebased = result.css;
-    }
-  } catch(e) {
-    console.log(e);
-    return Buffer.from('');
+    return result.css;
   }
+}
 
+function removeOffendingCSS(e) {
+  //return Buffer.from('');
 
-  return Buffer.from(rebased);
+  let source = e.input.source;
+  let len = source.length;
+
+  //determine positions of offending CSS in the source string
+  let crt = 0, line = 1;
+  for(; line < e.input.line && crt < len; crt++) {
+    if(source[crt] == '\n') {
+      line++;
+    }
+  }
+  let start = crt + e.input.column - 1;
+
+  for(; line < e.input.endLine; crt++) {
+    if(source[crt] == '\n') {
+      line++;
+    }
+  }
+  
+  let end = crt + e.input.endColumn - 1;
+
+  //expand the range to include the whole CSS block
+  while(end < len && (source[end] != '}')) {
+    end++;
+  }
+  while(start > 0 && source[start] != '}') {
+    start--;
+  }
+  let buf = new Buffer(source.substring(0, start + 1));
+  buf.write(source.substring(end));
+  return buf;
 }
 
 /**
