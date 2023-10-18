@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ignore inline stylesheet in noscript tag</title>
+    <meta name="description" content="Ignore inline stylesheet in noscript tag even if the option ignoreInlined is false" />
+    <noscript>
+      <style>
+        .test-selector {
+          color: blue;
+        }
+      </style>
+    </noscript>
+  </head>
+  <body>
+    <h1 class="test-selector">All blue</h1>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ignore inlined broken stylesheet</title>
+    <style id="template">
+      .test-selector {
+        color: {{COLOR_PARAM}};
+      }
+      .test-selector-bis {
+      font-weight:bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="test-selector test-selector-bis">All blue</h1>
+  </body>
+</html>

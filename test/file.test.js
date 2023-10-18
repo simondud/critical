@@ -1,20 +1,23 @@
 /* eslint-disable no-await-in-loop */
-
-'use strict';
-
-const {createServer} = require('http');
-const path = require('path');
-const {promisify} = require('util');
-const getPort = require('get-port');
-const fs = require('fs');
-const Vinyl = require('vinyl');
-const finalhandler = require('finalhandler');
-const serveStatic = require('serve-static');
-const {mapAsync} = require('../src/array');
-const {FileNotFoundError} = require('../src/errors');
-const {
+import {fileURLToPath} from 'node:url';
+import {createServer} from 'node:http';
+import {Buffer} from 'node:buffer';
+import process from 'node:process';
+import path from 'node:path';
+import {promisify} from 'node:util';
+import fs from 'node:fs';
+import {jest} from '@jest/globals';
+import getPort from 'get-port';
+import Vinyl from 'vinyl';
+import finalhandler from 'finalhandler';
+import serveStatic from 'serve-static';
+import {mapAsync} from '../src/array.js';
+import {FileNotFoundError} from '../src/errors.js';
+import {
   BASE_WARNING,
   isRemote,
+  isAbsolute,
+  checkCssOption,
   fileExists,
   joinPath,
   urlParse,
@@ -28,8 +31,10 @@ const {
   getDocument,
   getDocumentFromSource,
   getStylesheet,
-} = require('../src/file');
-const {read, strip} = require('./helper');
+} from '../src/file.js';
+import {read, strip} from './helper/index.js';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 const readFileAsync = promisify(fs.readFile);
 
@@ -58,6 +63,15 @@ afterEach(() => {
   stderr.mockRestore();
 });
 
+test('checkCssOption', () => {
+  expect(checkCssOption(undefined)).toEqual(false);
+  expect(checkCssOption('')).toEqual(false);
+  expect(checkCssOption(false)).toEqual(false);
+  expect(checkCssOption([])).toEqual(false);
+  expect(checkCssOption(['abc'])).toEqual(true);
+  expect(checkCssOption('abc')).toEqual(true);
+});
+
 test('Normalize paths', () => {
   const plattform = process.platform;
   Object.defineProperty(process, 'platform', {value: 'win32'});
@@ -73,6 +87,18 @@ test('Remote file detection', () => {
 
   local.forEach((p) => expect(isRemote(p)).toBe(false));
   remote.forEach((p) => expect(isRemote(p)).toBe(true));
+});
+
+test('Absolute file detection', () => {
+  const invalid = ['', false, {}];
+  const absolute = ['/usr/tmp/bar'];
+  const relative = ['../test/foo.html', './usr/tmp/bar'];
+  const remote = ['https://test.io/', '//test.io/styles/main.css'];
+
+  invalid.forEach((p) => expect(isAbsolute(p)).toBe(false));
+  relative.forEach((p) => expect(isAbsolute(p)).toBe(false));
+  remote.forEach((p) => expect(isAbsolute(p)).toBe(false));
+  absolute.forEach((p) => expect(isAbsolute(p)).toBe(true));
 });
 
 test('Error for file not found', () => {
@@ -253,7 +279,7 @@ test('Compute document base (with base option)', async () => {
       {filepath: `http://localhost:${port}/folder/generate-default.html`, expected: '/folder'},
       {filepath: `http://localhost:${port}/folder/head.html`, expected: '/folder'},
       {filepath: `http://localhost:${port}/generate-default.html`, expected: '/'},
-      {filepath: `http://localhost:${port}/folder`, expected: '/'},
+      {filepath: `http://localhost:${port}/folder`, expected: '/folder'},
       {filepath: `http://localhost:${port}/folder/`, expected: '/folder'},
       {filepath: path.join(__dirname, 'fixtures/folder/subfolder/head.html'), expected: '/folder/subfolder'},
       {filepath: path.join(__dirname, 'fixtures/folder/generate-default.html'), expected: '/folder'},
@@ -280,7 +306,7 @@ test('Compute document base (with base option)', async () => {
 test('Compute document base (without base option)', async () => {
   const vinyls = await Promise.all(
     [
-      {filepath: `http://localhost:${port}/folder`, expected: '/'},
+      {filepath: `http://localhost:${port}/folder`, expected: '/folder'},
       {filepath: `http://localhost:${port}/folder/`, expected: '/folder'},
       {filepath: path.join(__dirname, 'fixtures/folder/subfolder/head.html'), expected: '/folder/subfolder'},
       {filepath: path.join(__dirname, 'fixtures/folder/generate-default.html'), expected: '/folder'},
@@ -313,7 +339,7 @@ test('Get document', async () => {
   });
 
   const tests = [
-    {filepath: `http://localhost:${port}/folder`, expected: '/folder'},
+    {filepath: `http://localhost:${port}/folder`, expected: '/folder/index.html'},
     {filepath: `http://localhost:${port}/folder/`, expected: '/folder/index.html'},
     {filepath: path.join(__dirname, 'fixtures/folder/subfolder/head.html'), expected: '/folder/subfolder/head.html'},
     {
@@ -504,7 +530,7 @@ test('Get styles', async () => {
       const {filepath, expected, options = {}} = testdata;
       const file = await getStylesheet(document, filepath, {
         base: path.join(__dirname, 'fixtures'),
-        ...(options || {}),
+        ...options,
       });
       expect(file.contents.toString()).toMatch(expected[index]);
     }

@@ -1,4 +1,4 @@
-[![NPM version][npm-image]][npm-url] [![Build Status][ci-image]][ci-url] [![dependencies Status][depstat-image]][depstat-url] [![devDependencies Status][devdepstat-image]][devdepstat-url] [![Coverage][coveralls-image]][coveralls-url]
+[![NPM version][npm-image]][npm-url] [![Build Status][ci-image]][ci-url] [![Coverage][coveralls-image]][coveralls-url]
 
 # critical
 
@@ -29,13 +29,13 @@ npm i -D critical
 Include:
 
 ```js
-const critical = require('critical');
+import {generate} from 'critical';
 ```
 
 Full blown example with available options:
 
 ```js
-critical.generate({
+generate({
   // Inline the generated critical-path CSS
   // - true generates HTML
   // - false generates CSS
@@ -83,7 +83,7 @@ critical.generate({
 Basic usage:
 
 ```js
-critical.generate({
+generate({
   inline: true,
   base: 'test/',
   src: 'index.html',
@@ -98,7 +98,7 @@ critical.generate({
 Basic usage:
 
 ```js
-critical.generate({
+generate({
   base: 'test/',
   src: 'index.html',
   target: 'styles/main.css',
@@ -110,7 +110,7 @@ critical.generate({
 Generate and minify critical-path CSS:
 
 ```js
-critical.generate({
+generate({
   base: 'test/',
   src: 'index.html',
   target: 'styles/styles.min.css',
@@ -122,7 +122,7 @@ critical.generate({
 Generate, minify and inline critical-path CSS:
 
 ```js
-critical.generate({
+generate({
   inline: true,
   base: 'test/',
   src: 'index.html',
@@ -138,13 +138,13 @@ critical.generate({
 Generate and return output via callback:
 
 ```js
-critical.generate({
+generate({
     base: 'test/',
     src: 'index.html',
     width: 1300,
     height: 900,
     inline: true
-}, (err, ({css, html, uncritical})) => {
+}, (err, {css, html, uncritical}) => {
     // You now have critical-path CSS as well as the modified HTML.
     // Works with and without target specified.
     ...
@@ -154,7 +154,7 @@ critical.generate({
 Generate and return output via promise:
 
 ```js
-critical.generate({
+generate({
     base: 'test/',
     src: 'index.html',
     width: 1300,
@@ -171,7 +171,7 @@ critical.generate({
 Generate and return output via async function:
 
 ```js
-const {css, html, uncritical} = await critical.generate({
+const {css, html, uncritical} = await generate({
   base: 'test/',
   src: 'index.html',
   width: 1300,
@@ -185,7 +185,7 @@ When your site is adaptive and you want to deliver critical CSS for multiple scr
 _note:_ (your final output will be minified as to eliminate duplicate rule inclusion)
 
 ```js
-critical.generate({
+generate({
   base: 'test/',
   src: 'index.html',
   target: {
@@ -209,7 +209,7 @@ critical.generate({
 This is a useful option when you e.g. want to defer loading of webfonts or background images.
 
 ```js
-critical.generate({
+generate({
   base: 'test/',
   src: 'index.html',
   target: {
@@ -225,7 +225,7 @@ critical.generate({
 ### Generate critical-path CSS and specify asset rebase behaviour
 
 ```js
-critical.generate({
+generate({
   base: 'test/',
   src: 'index.html',
   target: {
@@ -239,41 +239,45 @@ critical.generate({
 ```
 
 ```js
-critical.generate({
+generate({
   base: 'test/',
   src: 'index.html',
   target: {
     css: 'styles/main.css',
   },
-  rebase: asset => `https://my-cdn.com${asset.absolutePath}`,
+  rebase: (asset) => `https://my-cdn.com${asset.absolutePath}`,
 });
 ```
 
 ### Options
 
-| Name             | Type                   | Default                                | Description                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------- | ---------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| inline           | `boolean`\|`object`    | `false`                                | Inline critical-path CSS using filamentgroup's loadCSS. Pass an object to configure [`inline-critical`](https://github.com/bezoerb/inline-critical#inlinehtml-styles-options)                                                                                                                                                                                                   |
-| base             | `string`               | `path.dirname(src)` or `process.cwd()` | Base directory in which the source and destination are to be written                                                                                                                                                                                                                                                                                                            |
-| html             | `string`               |                                        | HTML source to be operated against. This option takes precedence over the `src` option.                                                                                                                                                                                                                                                                                         |
-| css              | `array`                | `[]`                                   | An array of paths to css files, file globs or [Vinyl](https://www.npmjs.com/package/vinyl) file objects.                                                                                                                                                                                                                                                                        |
-| src              | `string`               |                                        | Location of the HTML source to be operated against                                                                                                                                                                                                                                                                                                                              |
-| target           | `string` or `object`   |                                        | Location of where to save the output of an operation. Use an object with 'html' and 'css' props if you want to store both                                                                                                                                                                                                                                                       |
-| width            | `integer`              | `1300`                                 | Width of the target viewport                                                                                                                                                                                                                                                                                                                                                    |
-| height           | `integer`              | `900`                                  | Height of the target viewport                                                                                                                                                                                                                                                                                                                                                   |
-| dimensions       | `array`                | `[]`                                   | An array of objects containing height and width. Takes precedence over `width` and `height` if set                                                                                                                                                                                                                                                                              |
-| extract          | `boolean`              | `false`                                | Remove the inlined styles from any stylesheets referenced in the HTML. It generates new references based on extracted content so it's safe to use for multiple HTML files referencing the same stylesheet. Use with caution. Removing the critical CSS per page results in a unique async loaded CSS file for every page. Meaning you can't rely on cache across multiple pages |
-| inlineImages     | `boolean`              | `false`                                | Inline images                                                                                                                                                                                                                                                                                                                                                                   |
-| assetPaths       | `array`                | `[]`                                   | List of directories/urls where the inliner should start looking for assets                                                                                                                                                                                                                                                                                                      |
-| maxImageFileSize | `integer`              | `10240`                                | Sets a max file size (in bytes) for base64 inlined images                                                                                                                                                                                                                                                                                                                       |
-| rebase           | `object` or `function` | `undefined`                            | Critical tries it's best to rebase the asset paths relative to the document. If this doesn't work as expected you can always use this option to control the rebase paths. See [`postcss-url`](https://github.com/postcss/postcss-url) for details. (https://github.com/pocketjoso/penthouse#usage-1).                                                                           |
-| ignore           | `array`                | `object`                               | `undefined`                                                                                                                                                                                                                                                                                                                                                                     | Ignore CSS rules. See [`postcss-discard`](https://github.com/bezoerb/postcss-discard) for usage examples. If you pass an array all rules will be applied to atrules, rules and declarations; |
-| userAgent        | `string`               | `''`                                   | User agent to use when fetching a remote src                                                                                                                                                                                                                                                                                                                                    |
-| penthouse        | `object`               | `{}`                                   | Configuration options for [`penthouse`](https://github.com/pocketjoso/penthouse).                                                                                                                                                                                                                                                                                               |
-| request          | `object`               | `{}`                                   | Configuration options for [`got`](hhttps://github.com/sindresorhus/got).                                                                                                                                                                                                                                                                                                        |
-| user             | `string`               | `undefined`                            | RFC2617 basic authorization: user                                                                                                                                                                                                                                                                                                                                               |
-| pass             | `string`               | `undefined`                            | RFC2617 basic authorization: pass                                                                                                                                                                                                                                                                                                                                               |
-| strict           | `boolean`              | `false`                                | Throw an error if no css is found                                                                                                                                                                                                                                                                                                                                               |
+| Name                | Type                   | Default                                                                                                                                                                                | Description                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| inline              | `boolean`\|`object`    | `false`                                                                                                                                                                                | Inline critical-path CSS using filamentgroup's loadCSS. Pass an object to configure [`inline-critical`](https://github.com/bezoerb/inline-critical#inlinehtml-styles-options)                                                                                                                                                                                                   |
+| base                | `string`               | `path.dirname(src)` or `process.cwd()`                                                                                                                                                 | Base directory in which the source and destination are to be written                                                                                                                                                                                                                                                                                                            |
+| html                | `string`               |                                                                                                                                                                                        | HTML source to be operated against. This option takes precedence over the `src` option.                                                                                                                                                                                                                                                                                         |
+| css                 | `array`                | `[]`                                                                                                                                                                                   | An array of paths to css files, file globs or [Vinyl](https://www.npmjs.com/package/vinyl) file objects.                                                                                                                                                                                                                                                                        |
+| src                 | `string`               |                                                                                                                                                                                        | Location of the HTML source to be operated against                                                                                                                                                                                                                                                                                                                              |
+| target              | `string` or `object`   |                                                                                                                                                                                        | Location of where to save the output of an operation. Use an object with 'html' and 'css' props if you want to store both                                                                                                                                                                                                                                                       |
+| width               | `integer`              | `1300`                                                                                                                                                                                 | Width of the target viewport                                                                                                                                                                                                                                                                                                                                                    |
+| height              | `integer`              | `900`                                                                                                                                                                                  | Height of the target viewport                                                                                                                                                                                                                                                                                                                                                   |
+| dimensions          | `array`                | `[]`                                                                                                                                                                                   | An array of objects containing height and width. Takes precedence over `width` and `height` if set                                                                                                                                                                                                                                                                              |
+| extract             | `boolean`              | `false`                                                                                                                                                                                | Remove the inlined styles from any stylesheets referenced in the HTML. It generates new references based on extracted content so it's safe to use for multiple HTML files referencing the same stylesheet. Use with caution. Removing the critical CSS per page results in a unique async loaded CSS file for every page. Meaning you can't rely on cache across multiple pages |
+| inlineImages        | `boolean`              | `false`                                                                                                                                                                                | Inline images                                                                                                                                                                                                                                                                                                                                                                   |
+| assetPaths          | `array`                | `[]`                                                                                                                                                                                   | List of directories/urls where the inliner should start looking for assets                                                                                                                                                                                                                                                                                                      |
+| maxImageFileSize    | `integer`              | `10240`                                                                                                                                                                                | Sets a max file size (in bytes) for base64 inlined images                                                                                                                                                                                                                                                                                                                       |
+| rebase              | `object` or `function` | `undefined`                                                                                                                                                                            | Critical tries it's best to rebase the asset paths relative to the document. If this doesn't work as expected you can always use this option to control the rebase paths. See [`postcss-url`](https://github.com/postcss/postcss-url) for details. (https://github.com/pocketjoso/penthouse#usage-1).                                                                           |
+| ignore              | `array` or `object`    | `undefined`                                                                                                                                                                            | Ignore CSS rules. See [`postcss-discard`](https://github.com/bezoerb/postcss-discard) for usage examples. If you pass an array all rules will be applied to atrules, rules and declarations;                                                                                                                                                                                    |
+| ignoreHTTPSErrors   | `boolean`              | `false`                                                                                                                                                                                | Ignore inlined stylesheets                                                                                                                                                                                                                                                                                                                                                      |
+| useURLInPenthouse   | `boolean`              | `false`                                                                                                                                                                                | Ignore inlined stylesheets                                                                                                                                                                                                                                                                                                                                                      |
+| ignoreInlinedStyles | `boolean`              | `false`                                                                                                                                                                                | Ignore inlined stylesheets                                                                                                                                                                                                                                                                                                                                                      |
+| userAgent           | `string`               | `''`                                                                                                                                                                                   | User agent to use when fetching a remote src                                                                                                                                                                                                                                                                                                                                    |
+| penthouse           | `object`               | `{}`                                                                                                                                                                                   | Configuration options for [`penthouse`](https://github.com/pocketjoso/penthouse).                                                                                                                                                                                                                                                                                               |
+| request             | `object`               | `{}`                                                                                                                                                                                   | Configuration options for [`got`](https://github.com/sindresorhus/got).                                                                                                                                                                                                                                                                                                         |
+| cleanCSS            | `object`               | `{level: {  1: { all: true }, 2: { all: false, removeDuplicateFontRules: true, removeDuplicateMediaBlocks: true, removeDuplicateRules: true, removeEmpty: true, mergeMedia: true } }}` | Configuration options for [`CleanCSS`](https://github.com/clean-css/clean-css) which let's you configure the optimization level for the generated critical css                                                                                                                                                                                                                  |
+| user                | `string`               | `undefined`                                                                                                                                                                            | RFC2617 basic authorization: user                                                                                                                                                                                                                                                                                                                                               |
+| pass                | `string`               | `undefined`                                                                                                                                                                            | RFC2617 basic authorization: pass                                                                                                                                                                                                                                                                                                                                               |
+| strict              | `boolean`              | `false`                                                                                                                                                                                | Throw an error on css parsing errors or if no css is found.                                                                                                                                                                                                                                                                                                                     |
 
 ## CLI
 
@@ -302,9 +306,9 @@ critical test/fixture/index.html --base test/fixture > critical.css
 ## Gulp
 
 ```js
-const gulp = require('gulp');
-const log = require('fancy-log');
-const critical = require('critical').stream;
+import gulp from 'gulp';
+import log from 'fancy-log';
+import {stream as critical} from 'critical';
 
 // Generate & Inline Critical-path CSS
 gulp.task('critical', () => {
@@ -317,7 +321,7 @@ gulp.task('critical', () => {
         css: ['dist/styles/components.css', 'dist/styles/main.css'],
       })
     )
-    .on('error', err => {
+    .on('error', (err) => {
       log.error(err.message);
     })
     .pipe(gulp.dest('dist'));
@@ -386,6 +390,10 @@ free to open up an issue and we can discuss it.
 
 This module is brought to you and maintained by the following people:
 
+ - Simon Duduica - Primary maintainer([Github](https://github.com/simondud)
+ 
+original project by:
+
 - Addy Osmani - Creator ([Github](https://github.com/addyosmani) / [Twitter](https://twitter.com/addyosmani))
 - Ben Zörb - Primary maintainer ([Github](https://github.com/bezoerb) / [Twitter](https://twitter.com/bezoerb))
 
@@ -397,9 +405,5 @@ This module is brought to you and maintained by the following people:
 [npm-image]: https://img.shields.io/npm/v/critical.svg
 [ci-url]: https://github.com/addyosmani/critical/actions?workflow=Tests
 [ci-image]: https://github.com/addyosmani/critical/workflows/Tests/badge.svg
-[depstat-url]: https://david-dm.org/addyosmani/critical
-[depstat-image]: https://img.shields.io/david/addyosmani/critical.svg
-[devdepstat-url]: https://david-dm.org/addyosmani/critical?type=dev
-[devdepstat-image]: https://img.shields.io/david/dev/addyosmani/critical.svg
 [coveralls-url]: https://coveralls.io/github/addyosmani/critical?branch=master
 [coveralls-image]: https://img.shields.io/coveralls/github/addyosmani/critical/master.svg

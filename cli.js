@@ -1,19 +1,14 @@
 #!/usr/bin/env node
-
-'use strict';
-
-const os = require('os');
-const chalk = require('chalk');
-const meow = require('meow');
-const groupArgs = require('group-args');
-const indentString = require('indent-string');
-const stdin = require('get-stdin');
-const reduce = require('lodash/reduce');
-const isString = require('lodash/isString');
-const isObject = require('lodash/isObject');
-const escapeRegExp = require('lodash/escapeRegExp');
-const {validate} = require('./src/config');
-const critical = require('.');
+import os from 'node:os';
+import process from 'node:process';
+import stdin from 'get-stdin';
+import groupArgs from 'group-args';
+import indentString from 'indent-string';
+import {escapeRegExp, isObject, isString, reduce} from 'lodash-es';
+import meow from 'meow';
+import pico from 'picocolors';
+import {validate} from './src/config.js';
+import {generate} from './index.js';
 
 const help = `
 Usage: critical <input> [<option>]
@@ -30,42 +25,50 @@ Options:
   --dimensions            Pass dimensions e.g. 1300x900
   --ignore                RegExp, @type or selector to ignore
   --ignore-[OPTION]       Pass options to postcss-discard. See https://goo.gl/HGo5YV
+  --ignoreInlinedStyles   Ignore inlined stylesheets
   --include               RegExp, @type or selector to include
   --include-[OPTION]      Pass options to inline-critical. See https://goo.gl/w6SHJM
-  --assetPaths            Directories/Urls where the inliner should start looking for assets.
+  --assetPaths            Directories/Urls where the inliner should start looking for assets
   --user                  RFC2617 basic authorization user
   --pass                  RFC2617 basic authorization password
   --penthouse-[OPTION]    Pass options to penthouse. See https://goo.gl/PQ5HLL
   --ua, --userAgent       User agent to use when fetching remote src
+  --strict                Throw an error on css parsing errors or if no css is found
 `;
 
 const meowOpts = {
+  importMeta: import.meta,
   flags: {
     base: {
       type: 'string',
-      alias: 'b',
+      shortFlag: 'b',
     },
     css: {
       type: 'string',
-      alias: 'c',
+      shortFlag: 'c',
+      isMultiple: true,
     },
     width: {
-      alias: 'w',
+      shortFlag: 'w',
     },
     height: {
-      alias: 'h',
+      shortFlag: 'h',
     },
     inline: {
       type: 'boolean',
-      alias: 'i',
+      shortFlag: 'i',
     },
     extract: {
       type: 'boolean',
-      alias: 'e',
+      shortFlag: 'e',
       default: false,
     },
     inlineImages: {
       type: 'boolean',
+    },
+    ignoreInlinedStyles: {
+      type: 'boolean',
+      default: false,
     },
     ignore: {
       type: 'string',
@@ -73,12 +76,16 @@ const meowOpts = {
     user: {
       type: 'string',
     },
+    strict: {
+      type: 'boolean',
+      default: false,
+    },
     pass: {
       type: 'string',
     },
     userAgent: {
       type: 'string',
-      alias: 'ua',
+      shortFlag: 'ua',
     },
     dimensions: {
       type: 'string',
@@ -113,8 +120,8 @@ const isAlias = (key) => {
   }
 
   const aliases = Object.keys(meowOpts.flags)
-    .filter((k) => meowOpts.flags[k].alias)
-    .map((k) => meowOpts.flags[k].alias);
+    .filter((k) => meowOpts.flags[k].shortFlag)
+    .map((k) => meowOpts.flags[k].shortFlag);
 
   return aliases.includes(key);
 };
@@ -181,7 +188,7 @@ const normalizedFlags = reduce(
 );
 
 function showError(err) {
-  process.stderr.write(indentString(chalk.red('Error: ') + err.message || err, 3));
+  process.stderr.write(indentString(pico.red('Error: ') + err.message || err, 3));
   process.stderr.write(os.EOL);
   process.stderr.write(indentString(help, 3));
   process.exit(1);
@@ -212,9 +219,9 @@ function run(data) {
   }
 
   if (Array.isArray(css)) {
-    opts.css = [...css, ...additionalCss].filter((file) => file);
+    opts.css = [...css, ...additionalCss].filter(Boolean);
   } else if (css || additionalCss.length > 0) {
-    opts.css = [css, ...additionalCss].filter((file) => file);
+    opts.css = [css, ...additionalCss].filter(Boolean);
   }
 
   if (data) {
@@ -224,7 +231,7 @@ function run(data) {
   }
 
   try {
-    critical.generate(opts, (error, val) => {
+    generate(opts, (error, val) => {
       if (error) {
         showError(error);
       } else if (opts.inline) {
@@ -243,6 +250,6 @@ function run(data) {
 if (cli.input[0]) {
   run();
 } else {
-  // Get stdin
-  stdin().then(run); /* eslint-disable-line promise/prefer-await-to-then */
+  const data = await stdin();
+  run(data);
 }

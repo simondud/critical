@@ -1,19 +1,30 @@
-'use strict';
+import {exec, execFile} from 'node:child_process';
+// import {createRequire} from 'node:module';
+import path from 'node:path';
+import process from 'node:process';
+import {fileURLToPath} from 'node:url';
+import {promisify} from 'node:util';
+import {globby} from 'globby';
+import {jest} from '@jest/globals';
+import nn from 'normalize-newline';
+import {read, getPkg} from './helper/index.js';
 
-const {exec, execFile} = require('child_process');
-const path = require('path');
-const {promisify} = require('util');
-const nn = require('normalize-newline');
-const globby = require('globby');
-const {version, bin} = require('../package.json');
-const {read} = require('./helper');
+jest.setTimeout(100_000);
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// const require = createRequire(import.meta.url);
+
+const {version, bin} = getPkg();
+
+jest.unstable_mockModule('../index.js', () => ({
+  generate: jest.fn(),
+  stream: jest.fn(),
+}));
 
 const criticalBin = path.join(__dirname, '..', bin);
 
 process.chdir(path.resolve(__dirname));
 process.setMaxListeners(0);
-
-jest.setTimeout(100000);
 
 const pExec = promisify(exec);
 const pExecFile = promisify(execFile);
@@ -22,16 +33,14 @@ const run = async (args = []) => pExecFile('node', [criticalBin, ...args]);
 
 const getArgs = async (params = []) => {
   const origArgv = process.argv;
-  const critical = require('..');
-
-  critical.generate = jest.fn();
   process.argv = ['node', criticalBin, ...params];
 
-  require('../cli'); // eslint-disable-line import/no-unassigned-import
+  await import('../cli.js');
   process.argv = origArgv;
-  const [args] = critical.generate.mock.calls;
+  const {generate} = await import('../index.js');
+  const [args] = generate.mock.calls;
   const [opts] = args || [{}];
-  expect(critical.generate).toHaveBeenCalledTimes(1);
+  expect(generate).toHaveBeenCalledTimes(1);
   return opts || {};
 };
 
@@ -272,7 +281,7 @@ describe('CLI', () => {
       expect(args).toMatchObject({
         penthouse: {
           strict: true,
-          timeout: 50000,
+          timeout: 50_000,
           renderWaitTime: 300,
         },
       });
